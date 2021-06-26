@@ -6,6 +6,7 @@
 # |_|  \___/|_| |_|     |_.__/|_|\__,_|\___|\__\___/ \___/ \__|_| |_|
 #
 # Author: Nick Clyde (clydedroid)
+# Author: Thibaud Lepretre (kakawait)
 #
 # A script that generates a rofi menu that uses bluetoothctl to
 # connect to bluetooth devices and display status info.
@@ -23,6 +24,14 @@ goback="Back"
 # Checks if bluetooth controller is powered on
 power_on() {
     if bluetoothctl show | grep -q "Powered: yes"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+connect_on() {
+    if  [ "$(echo info | bluetoothctl | grep 'Device' | wc -c)" -eq 0 ]; then
         return 0
     else
         return 1
@@ -183,7 +192,11 @@ toggle_trust() {
 # Useful for status bars like polybar, etc.
 print_status() {
     if power_on; then
-        printf ''
+        if connect_on; then
+            echo "${1}"
+        else
+            echo "${2}"
+        fi
 
         mapfile -t paired_devices < <(bluetoothctl paired-devices | grep Device | cut -d ' ' -f 2)
         counter=0
@@ -203,7 +216,7 @@ print_status() {
         done
         printf "\n"
     else
-        echo ""
+        echo "${3}"
     fi
 }
 
@@ -303,7 +316,7 @@ rofi_command="rofi -dmenu -no-fixed-num-lines -yoffset -100 -i -p"
 
 case "$1" in
     --status)
-        print_status
+        print_status "${2:-%{F#dadce0\}}" "${3:-%{F#dadce0\}}" "${4:-%{F#dadce0\}}"
         ;;
     *)
         show_menu
